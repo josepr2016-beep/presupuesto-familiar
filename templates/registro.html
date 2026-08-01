@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Registrar movimiento{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-md-8 col-lg-5">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body quick-form">
+                <h5 class="card-title mb-3"><i class="bi bi-plus-circle text-success"></i> Nuevo movimiento</h5>
+
+                <form method="POST" action="{{ url_for('registro') }}" id="formRegistro">
+                    <!-- Selector de tipo con botones grandes (fácil de tocar) -->
+                    <div class="btn-group w-100 mb-3" role="group">
+                        <input type="radio" class="btn-check" name="type" id="tipoIngreso" value="ingreso" autocomplete="off">
+                        <label class="btn btn-outline-success" for="tipoIngreso"><i class="bi bi-arrow-down-circle"></i> Ingreso</label>
+
+                        <input type="radio" class="btn-check" name="type" id="tipoGasto" value="gasto" autocomplete="off" checked>
+                        <label class="btn btn-outline-danger" for="tipoGasto"><i class="bi bi-arrow-up-circle"></i> Gasto</label>
+
+                        <input type="radio" class="btn-check" name="type" id="tipoAhorro" value="ahorro" autocomplete="off">
+                        <label class="btn btn-outline-primary" for="tipoAhorro"><i class="bi bi-piggy-bank"></i> Ahorro</label>
+                    </div>
+
+                    <!-- Monto: campo grande, es lo primero que se llena -->
+                    <div class="mb-3">
+                        <label class="form-label">Monto (COP)</label>
+                        <input type="number" step="1" min="1" name="amount" class="form-control amount-input" placeholder="0" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Categoría</label>
+                        <select name="category_id" id="selectCategoria" class="form-select" required>
+                            {% for c in categorias if c.type == 'gasto' %}
+                                <option value="{{ c.id }}" data-tipo="{{ c.type }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Cuenta / Efectivo de origen</label>
+                        <select name="account_id" class="form-select" required>
+                            {% for a in cuentas %}
+                                <option value="{{ a.id }}">{{ a.name }} ({{ a.type|capitalize }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" name="date" class="form-control" value="{{ hoy }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descripción (opcional)</label>
+                        <input type="text" name="description" class="form-control" placeholder="Ej: Mercado Éxito Cedritos" maxlength="255">
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold">
+                        <i class="bi bi-check-circle"></i> Guardar movimiento
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Últimos movimientos: feedback inmediato -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title mb-3">Últimos movimientos</h6>
+                {% if movimientos %}
+                    <div class="list-group">
+                    {% for m in movimientos %}
+                        <div class="list-group-item movimiento-item d-flex justify-content-between align-items-center mb-2 border rounded">
+                            <div>
+                                <div class="fw-semibold">{{ m.category.name }}</div>
+                                <small class="text-muted">{{ m.date.strftime('%d/%m/%Y') }}{% if m.description %} · {{ m.description }}{% endif %}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="movimiento-monto {{ m.type }}">{{ m.amount|cop }}</div>
+                                <form method="POST" action="{{ url_for('eliminar_movimiento', mov_id=m.id) }}" class="d-inline">
+                                    <button class="btn btn-sm btn-link text-danger p-0" onclick="return confirm('¿Eliminar este movimiento?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">Aún no hay movimientos registrados.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

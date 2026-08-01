@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Conciliación{% endblock %}
+
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-bank"></i> Conciliación de Cuentas y Efectivo</h4>
+
+<!-- Resumen: saldo teórico vs último saldo real registrado -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white"><strong>Saldo teórico vs. saldo real</strong></div>
+    <div class="table-responsive">
+        <table class="table table-conciliacion mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Cuenta</th>
+                    <th class="text-end">Saldo teórico (sistema)</th>
+                    <th class="text-end">Último saldo real</th>
+                    <th class="text-end">Diferencia</th>
+                    <th>Última conciliación</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in resumen %}
+                <tr>
+                    <td>{{ r.cuenta.name }} <span class="badge bg-secondary">{{ r.cuenta.type|capitalize }}</span></td>
+                    <td class="text-end">{{ r.saldo_teorico|cop }}</td>
+                    <td class="text-end">
+                        {% if r.saldo_real is not none %}{{ r.saldo_real|cop }}{% else %}<span class="text-muted">Sin registrar</span>{% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if r.diferencia is not none %}
+                            <span class="{{ 'diferencia-ok' if r.diferencia == 0 else 'diferencia-mal' }}">
+                                {{ r.diferencia|cop }}
+                                {% if r.diferencia != 0 %}
+                                    <i class="bi bi-exclamation-triangle-fill" title="Posible gasto fantasma o movimiento sin registrar"></i>
+                                {% endif %}
+                            </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{{ r.fecha_conciliacion.strftime('%d/%m/%Y') if r.fecha_conciliacion else '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-muted text-center py-3">No hay cuentas activas. Crea una en el módulo de Cuentas.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer bg-white small text-muted">
+        <i class="bi bi-info-circle"></i> El <strong>saldo teórico</strong> se calcula automáticamente a partir del saldo inicial
+        más todos los movimientos registrados. Si difiere del saldo real de tu banco o billetera, puede indicar un
+        "gasto fantasma" (un gasto real que no se anotó en la app).
+    </div>
+</div>
+
+<div class="row">
+    <!-- Formulario de nueva conciliación -->
+    <div class="col-12 col-lg-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title">Registrar saldo real</h6>
+                <form method="POST" action="{{ url_for('conciliacion') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Cuenta</label>
+                        <select name="account_id" class="form-select" required>
+                            {% for c in cuentas %}
+                                <option value="{{ c.id }}">{{ c.name }} ({{ c.type|capitalize }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Saldo real observado (COP)</label>
+                        <input type="number" step="1" name="real_balance" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" name="date" class="form-control" value="{{ hoy }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nota (opcional)</label>
+                        <input type="text" name="note" class="form-control" maxlength="255" placeholder="Ej: Saldo verificado en app del banco">
+                    </div>
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-check2-circle"></i> Guardar conciliación</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial -->
+    <div class="col-12 col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white"><strong>Historial de conciliaciones</strong></div>
+            <ul class="list-group list-group-flush">
+                {% for h in historial %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-semibold">{{ h.account.name }}</div>
+                        <small class="text-muted">{{ h.date.strftime('%d/%m/%Y') }}{% if h.note %} · {{ h.note }}{% endif %}</small>
+                    </div>
+                    <div class="fw-bold">{{ h.real_balance|cop }}</div>
+                </li>
+                {% else %}
+                <li class="list-group-item text-muted">Sin conciliaciones registradas todavía.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

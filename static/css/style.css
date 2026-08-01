@@ -1,0 +1,106 @@
+/* =========================================================
+   style.css — Diseño mobile-first para Presupuesto Familiar
+   Paleta: verde esmeralda (finanzas/ahorro) + acentos neutros
+   ========================================================= */
+
+:root {
+    --brand-primary: #0f5132;
+    --brand-primary-light: #146c43;
+    --brand-accent: #2e7d32;
+    --brand-bg: #f4f7f6;
+    --brand-danger: #b02a37;
+    --brand-warning: #b8860b;
+    --brand-success: #1e7e34;
+}
+
+body {
+    background-color: var(--brand-bg);
+    padding-bottom: 76px; /* espacio para la barra inferior en celular */
+}
+
+.app-navbar {
+    background-color: var(--brand-primary);
+}
+
+.app-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-top: 1rem;
+}
+
+/* ---------- Tarjetas resumen del dashboard ---------- */
+.summary-card {
+    border: none;
+    border-radius: 14px;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.summary-card.ingresos { background: linear-gradient(135deg, #146c43, #0f5132); }
+.summary-card.gastos   { background: linear-gradient(135deg, #b02a37, #7a1f28); }
+.summary-card.ahorros  { background: linear-gradient(135deg, #0d6efd, #084298); }
+.summary-card.balance  { background: linear-gradient(135deg, #495057, #212529); }
+
+.summary-card .value { font-size: 1.6rem; font-weight: 700; }
+.summary-card .label { font-size: 0.85rem; opacity: 0.85; text-transform: uppercase; letter-spacing: .03em; }
+
+/* ---------- Barra de progreso presupuesto vs ejecutado ---------- */
+.progress { height: 10px; border-radius: 6px; background-color: #e9ecef; }
+.progress-bar.bg-success { background-color: var(--brand-success) !important; }
+.progress-bar.bg-warning { background-color: var(--brand-warning) !important; }
+.progress-bar.bg-danger  { background-color: var(--brand-danger)  !important; }
+
+/* ---------- Formulario de registro rápido (celular) ---------- */
+.quick-form .btn-check + label.btn {
+    border-radius: 10px;
+    font-weight: 600;
+}
+.quick-form input.form-control, .quick-form select.form-select {
+    font-size: 1.05rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+}
+.amount-input {
+    font-size: 1.5rem !important;
+    font-weight: 700;
+    text-align: right;
+}
+
+/* ---------- Lista de movimientos recientes ---------- */
+.movimiento-item { border-radius: 10px; }
+.movimiento-monto.ingreso { color: var(--brand-success); font-weight: 700; }
+.movimiento-monto.gasto   { color: var(--brand-danger); font-weight: 700; }
+.movimiento-monto.ahorro  { color: #084298; font-weight: 700; }
+
+/* ---------- Tabla de conciliación / presupuesto ---------- */
+.table-conciliacion td, .table-conciliacion th { vertical-align: middle; }
+.diferencia-ok { color: var(--brand-success); font-weight: 600; }
+.diferencia-mal { color: var(--brand-danger); font-weight: 600; }
+
+/* ---------- Barra inferior de navegación (solo celular) ---------- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    background: #fff;
+    border-top: 1px solid #dee2e6;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+    z-index: 1030;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-nav-item {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0 6px;
+    color: #6c757d;
+    text-decoration: none;
+    font-size: 0.7rem;
+}
+.bottom-nav-item i { display: block; font-size: 1.3rem; margin-bottom: 2px; }
+.bottom-nav-item.active { color: var(--brand-primary); }
+.bottom-nav-fab i { color: var(--brand-primary); font-size: 2rem; }
+
+/* ---------- Ajustes para pantallas grandes (PC) ---------- */
+@media (min-width: 992px) {
+    .app-content { padding-top: 1.5rem; }
+    body { padding-bottom: 0; }
+}

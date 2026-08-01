@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h4 class="mb-0"><i class="bi bi-speedometer2"></i> Consolidación de {{ nombre_mes(month) }} {{ year }}</h4>
+    <form method="GET" class="d-flex gap-2">
+        <select name="month" class="form-select form-select-sm" onchange="this.form.submit()">
+            {% for m in range(1, 13) %}
+                <option value="{{ m }}" {{ 'selected' if m == month }}>{{ nombre_mes(m) }}</option>
+            {% endfor %}
+        </select>
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+            {% for y in range(year - 2, year + 3) %}
+                <option value="{{ y }}" {{ 'selected' if y == year }}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<!-- Tarjetas resumen -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card ingresos p-3">
+            <div class="label">Ingresos</div>
+            <div class="value">{{ total_ingresos|cop }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card gastos p-3">
+            <div class="label">Gastos</div>
+            <div class="value">{{ total_gastos|cop }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card ahorros p-3">
+            <div class="label">Ahorros</div>
+            <div class="value">{{ total_ahorros|cop }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card balance p-3">
+            <div class="label">Balance neto</div>
+            <div class="value">{{ balance_neto|cop }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Detalle presupuesto vs ejecutado -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white"><strong>Presupuesto Asignado vs. Ejecutado por Categoría</strong></div>
+    <div class="table-responsive">
+        <table class="table table-conciliacion mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Categoría</th>
+                    <th class="text-end">Presupuestado</th>
+                    <th class="text-end">Ejecutado</th>
+                    <th class="text-end">Diferencia</th>
+                    <th style="width: 220px;">% Ejecución</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in detalle %}
+                <tr>
+                    <td>
+                        {{ item.categoria.name }}
+                        {% if item.categoria.type == 'ahorro' %}
+                            <span class="badge bg-primary-subtle text-primary-emphasis ms-1">Ahorro</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ item.presupuestado|cop }}</td>
+                    <td class="text-end">{{ item.ejecutado|cop }}</td>
+                    <td class="text-end {{ 'diferencia-ok' if item.diferencia >= 0 else 'diferencia-mal' }}">
+                        {{ item.diferencia|cop }}
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1">
+                                <div class="progress-bar bg-{{ item.nivel_alerta }}"
+                                     style="width: {{ item.porcentaje if item.porcentaje <= 100 else 100 }}%"></div>
+                            </div>
+                            <span class="badge bg-{{ item.nivel_alerta }}">{{ item.porcentaje }}%</span>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-muted text-center py-3">
+                    No hay presupuesto ni movimientos para este periodo. Ve a
+                    <a href="{{ url_for('presupuesto', month=month, year=year) }}">Presupuesto</a> para empezar.
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-3 small text-muted">
+    <i class="bi bi-info-circle"></i>
+    Semáforo: <span class="badge bg-success">&lt; 80%</span> dentro del presupuesto ·
+    <span class="badge bg-warning">80% - 100%</span> cerca del límite ·
+    <span class="badge bg-danger">&gt; 100%</span> presupuesto superado.
+</div>
+{% endblock %}

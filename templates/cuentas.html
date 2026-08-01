@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Cuentas{% endblock %}
+
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-wallet2"></i> Cuentas Bancarias y Efectivo</h4>
+
+<div class="row">
+    <div class="col-12 col-lg-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title">Nueva cuenta</h6>
+                <form method="POST" action="{{ url_for('cuentas') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="name" class="form-control" placeholder="Ej: Bancolombia Ahorros" required maxlength="80">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select name="type" class="form-select" required>
+                            <option value="banco">Cuenta bancaria</option>
+                            <option value="efectivo">Efectivo</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Saldo inicial (COP)</label>
+                        <input type="number" step="1" name="initial_balance" class="form-control" value="0" required>
+                        <div class="form-text">Saldo con el que empieza a operar esta cuenta en el sistema.</div>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus"></i> Crear cuenta</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-8">
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-conciliacion mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Saldo inicial</th>
+                            <th class="text-end">Saldo teórico actual</th>
+                            <th>Estado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in cuentas %}
+                        <tr>
+                            <td>
+                                <form method="POST" action="{{ url_for('editar_cuenta', acc_id=c.id) }}" class="d-flex align-items-center gap-2">
+                                    <input type="text" name="name" value="{{ c.name }}" class="form-control form-control-sm" style="max-width:180px;">
+                            </td>
+                            <td><span class="badge bg-secondary">{{ c.type|capitalize }}</span></td>
+                            <td class="text-end">{{ c.initial_balance|cop }}</td>
+                            <td class="text-end fw-semibold">{{ c.theoretical_balance()|cop }}</td>
+                            <td>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" name="active" {{ 'checked' if c.active }}>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-save"></i></button>
+                                </form>
+                                <form method="POST" action="{{ url_for('eliminar_cuenta', acc_id=c.id) }}" class="d-inline"
+                                      onsubmit="return confirm('¿Eliminar/desactivar esta cuenta?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-muted text-center py-3">Aún no hay cuentas registradas.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

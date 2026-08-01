@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Categorías{% endblock %}
+
+{% block content %}
+<h4 class="mb-3"><i class="bi bi-tags"></i> Gestión de Categorías</h4>
+
+<div class="row">
+    <!-- Formulario de creación -->
+    <div class="col-12 col-lg-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title">Nueva categoría</h6>
+                <form method="POST" action="{{ url_for('categorias') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="name" class="form-control" required maxlength="80">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Grupo</label>
+                        <select name="type" class="form-select" required>
+                            <option value="ingreso">Ingreso</option>
+                            <option value="gasto">Gasto</option>
+                            <option value="ahorro">Ahorro</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus"></i> Crear</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Listado agrupado -->
+    <div class="col-12 col-lg-8">
+        {% for grupo, nombre_grupo, icono in [('ingreso','Ingresos','bi-arrow-down-circle text-success'),
+                                               ('gasto','Gastos','bi-arrow-up-circle text-danger'),
+                                               ('ahorro','Ahorros','bi-piggy-bank text-primary')] %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white">
+                <i class="bi {{ icono }}"></i> <strong>{{ nombre_grupo }}</strong>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for cat in agrupadas[grupo] %}
+                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <form method="POST" action="{{ url_for('editar_categoria', cat_id=cat.id) }}" class="d-flex align-items-center gap-2 flex-grow-1">
+                        <input type="text" name="name" value="{{ cat.name }}" class="form-control form-control-sm" style="max-width: 220px;">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" name="active" {{ 'checked' if cat.active }}>
+                            <label class="form-check-label small text-muted">Activa</label>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-save"></i></button>
+                    </form>
+                    <form method="POST" action="{{ url_for('eliminar_categoria', cat_id=cat.id) }}"
+                          onsubmit="return confirm('¿Eliminar/desactivar esta categoría?')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                </li>
+                {% else %}
+                <li class="list-group-item text-muted">Sin categorías en este grupo.</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

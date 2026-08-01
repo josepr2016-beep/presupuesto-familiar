@@ -1,0 +1,31 @@
+# render.yaml
+# -----------
+# "Infraestructura como código" para Render.com.
+# Al conectar este repositorio en Render y elegir "New + -> Blueprint",
+# Render lee este archivo y crea automáticamente:
+#   1. Un Web Service gratuito con la app Flask (gunicorn)
+#   2. Una base de datos PostgreSQL gratuita, ya conectada vía DATABASE_URL
+#
+# No requiere configuración manual adicional más allá de conectar el repo.
+
+databases:
+  - name: presupuesto-familiar-db
+    plan: free
+    databaseName: presupuesto_familiar
+    user: presupuesto_user
+
+services:
+  - type: web
+    name: presupuesto-familiar
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: presupuesto-familiar-db
+          property: connectionString
