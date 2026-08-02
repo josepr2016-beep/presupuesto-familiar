@@ -19,12 +19,14 @@ services:
     name: presupuesto-familiar
     runtime: python
     plan: free
-    buildCommand: "pip install -r requirements.txt"
+    buildCommand: "pip install -r requirements.txt -r requirements-prod.txt"
     startCommand: "gunicorn app:app --bind 0.0.0.0:$PORT"
     healthCheckPath: /health
     envVars:
       - key: SECRET_KEY
         generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.12.6"
       - key: DATABASE_URL
         fromDatabase:
           name: presupuesto-familiar-db
