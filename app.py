@@ -6,6 +6,7 @@ Aplicación web de Presupuesto Familiar.
 Módulos incluidos:
   /                -> Redirige al Dashboard
   /registro        -> Registro diario de movimientos (mobile-first)
+  /movimientos     -> Detalle completo de movimientos de un mes + edición
   /categorias      -> Gestión de categorías (Ingreso/Gasto/Ahorro)
   /cuentas         -> Gestión de cuentas bancarias y efectivo
   /presupuesto     -> Asignación de presupuesto mensual
@@ -27,7 +28,7 @@ from models import (
     Category, Account, Transaction, Budget, BalanceCheck,
     TIPO_INGRESO, TIPO_GASTO, TIPO_AHORRO, TIPOS_VALIDOS, TIPOS_CUENTA_VALIDOS,
 )
-from utils import format_cop, nombre_mes, rango_mes, mes_actual
+from utils import format_cop, nombre_mes, rango_mes, mes_actual, periodo_por_defecto
 
 
 def create_app():
@@ -45,10 +46,44 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        _migrar_esquema()
         _seed_categorias_por_defecto()
 
     register_routes(app)
     return app
+
+
+def _migrar_esquema():
+    """
+    Migración ligera e idempotente (se puede correr muchas veces sin
+    problema, incluso en cada arranque del servidor).
+
+    Agrega las columnas budget_month / budget_year a la tabla
+    'transactions' si todavía no existen (instalaciones creadas antes de
+    esta funcionalidad), y rellena su valor a partir de la fecha real de
+    cada movimiento ya guardado. No borra ni modifica ningún otro dato.
+    """
+    inspector_cols = {"budget_month", "budget_year"}
+    with db.engine.connect() as conn:
+        for columna in inspector_cols:
+            try:
+                conn.execute(db.text(f"ALTER TABLE transactions ADD COLUMN {columna} INTEGER"))
+                conn.commit()
+            except Exception:
+                # La columna ya existe (o la tabla aún no existe en un
+                # primer arranque limpio, en cuyo caso create_all ya la
+                # creó completa) -> no es un error real, seguimos.
+                conn.rollback()
+
+    # Backfill: movimientos antiguos que quedaron sin periodo presupuestal
+    pendientes = Transaction.query.filter(
+        db.or_(Transaction.budget_month.is_(None), Transaction.budget_year.is_(None))
+    ).all()
+    for t in pendientes:
+        t.budget_month = t.date.month
+        t.budget_year = t.date.year
+    if pendientes:
+        db.session.commit()
 
 
 def _seed_categorias_por_defecto():
@@ -80,9 +115,8 @@ def register_routes(app):
         return redirect(url_for("dashboard"))
 
     # ------------------------------------------------------------------
-    # HEALTH CHECK -> usado por el proveedor de nube (y opcionalmente por
-    # un servicio de "ping" externo) para verificar que el servidor y la
-    # base de datos están respondiendo. No requiere autenticación.
+    # HEALTH CHECK -> usado por el proveedor de nube para verificar que el
+    # servidor y la base de datos están respondiendo.
     # ------------------------------------------------------------------
     @app.route("/health")
     def health():
@@ -105,19 +139,27 @@ def register_routes(app):
                 amount = float(request.form["amount"])
                 fecha = datetime.strptime(request.form["date"], "%Y-%m-%d").date()
                 descripcion = request.form.get("description", "").strip()
+                usar_mes_anterior = "mes_anterior" in request.form
 
                 if tipo not in TIPOS_VALIDOS:
                     raise ValueError("Tipo de movimiento inválido")
                 if amount <= 0:
                     raise ValueError("El monto debe ser mayor a cero")
 
+                budget_month, budget_year = periodo_por_defecto(fecha, usar_mes_anterior)
+
                 nuevo = Transaction(
                     type=tipo, category_id=category_id, account_id=account_id,
                     amount=amount, date=fecha, description=descripcion,
+                    budget_month=budget_month, budget_year=budget_year,
                 )
                 db.session.add(nuevo)
                 db.session.commit()
-                flash("Movimiento registrado correctamente.", "success")
+
+                if usar_mes_anterior:
+                    flash(f"Movimiento registrado y contabilizado en el presupuesto de {nombre_mes(budget_month)} {budget_year}.", "success")
+                else:
+                    flash("Movimiento registrado correctamente.", "success")
             except (KeyError, ValueError) as e:
                 flash(f"Error al registrar: {e}", "danger")
             return redirect(url_for("registro"))
@@ -142,13 +184,86 @@ def register_routes(app):
         db.session.delete(mov)
         db.session.commit()
         flash("Movimiento eliminado.", "info")
-        return redirect(url_for("registro"))
+        return redirect(request.referrer or url_for("registro"))
 
     # API auxiliar: filtra categorías según el tipo elegido (usado por JS)
     @app.route("/api/categorias/<tipo>")
     def api_categorias_por_tipo(tipo):
         categorias = Category.query.filter_by(type=tipo, active=True).order_by(Category.name).all()
         return jsonify([{"id": c.id, "name": c.name} for c in categorias])
+
+    # ------------------------------------------------------------------
+    # MÓDULO NUEVO: DETALLE DE MOVIMIENTOS DE UN MES + EDICIÓN
+    # ------------------------------------------------------------------
+    @app.route("/movimientos")
+    def movimientos():
+        mes_actual_num, anio_actual_num = mes_actual()
+        month = int(request.args.get("month", mes_actual_num))
+        year = int(request.args.get("year", anio_actual_num))
+        category_id = request.args.get("category_id", type=int)
+        tipo = request.args.get("type")
+
+        # El filtro es por PERIODO PRESUPUESTAL (budget_month/year), no por
+        # la fecha real, para que un gasto marcado "mes anterior" aparezca
+        # en el mes al que realmente pertenece presupuestalmente.
+        query = Transaction.query.filter_by(budget_month=month, budget_year=year)
+        if category_id:
+            query = query.filter_by(category_id=category_id)
+        if tipo in TIPOS_VALIDOS:
+            query = query.filter_by(type=tipo)
+
+        lista = query.order_by(Transaction.date.desc(), Transaction.id.desc()).all()
+
+        categorias = Category.query.order_by(Category.type, Category.name).all()
+        categoria_filtrada = Category.query.get(category_id) if category_id else None
+
+        totales = {
+            TIPO_INGRESO: sum(m.amount for m in lista if m.type == TIPO_INGRESO),
+            TIPO_GASTO: sum(m.amount for m in lista if m.type == TIPO_GASTO),
+            TIPO_AHORRO: sum(m.amount for m in lista if m.type == TIPO_AHORRO),
+        }
+
+        return render_template(
+            "movimientos.html",
+            movimientos=lista, month=month, year=year,
+            categorias=categorias, category_id=category_id,
+            categoria_filtrada=categoria_filtrada, tipo_filtrado=tipo,
+            totales=totales,
+        )
+
+    @app.route("/movimientos/editar/<int:mov_id>", methods=["GET", "POST"])
+    def editar_movimiento(mov_id):
+        mov = Transaction.query.get_or_404(mov_id)
+
+        if request.method == "POST":
+            try:
+                mov.type = request.form["type"]
+                mov.category_id = int(request.form["category_id"])
+                mov.account_id = int(request.form["account_id"])
+                mov.amount = float(request.form["amount"])
+                mov.date = datetime.strptime(request.form["date"], "%Y-%m-%d").date()
+                mov.description = request.form.get("description", "").strip()
+                mov.budget_month = int(request.form["budget_month"])
+                mov.budget_year = int(request.form["budget_year"])
+
+                if mov.type not in TIPOS_VALIDOS:
+                    raise ValueError("Tipo de movimiento inválido")
+                if mov.amount <= 0:
+                    raise ValueError("El monto debe ser mayor a cero")
+
+                db.session.commit()
+                flash("Movimiento actualizado correctamente.", "success")
+                return redirect(url_for("movimientos", month=mov.budget_month, year=mov.budget_year))
+            except (KeyError, ValueError) as e:
+                db.session.rollback()
+                flash(f"Error al actualizar: {e}", "danger")
+                return redirect(url_for("editar_movimiento", mov_id=mov_id))
+
+        categorias = Category.query.order_by(Category.type, Category.name).all()
+        cuentas = Account.query.order_by(Account.name).all()
+        return render_template(
+            "editar_movimiento.html", mov=mov, categorias=categorias, cuentas=cuentas
+        )
 
     # ------------------------------------------------------------------
     # MÓDULO 2: GESTIÓN DE CATEGORÍAS
@@ -187,7 +302,6 @@ def register_routes(app):
     def eliminar_categoria(cat_id):
         cat = Category.query.get_or_404(cat_id)
         if cat.transactions or cat.budgets:
-            # No se borra físicamente si ya tiene historial: se desactiva
             cat.active = False
             db.session.commit()
             flash("La categoría tiene movimientos asociados; se desactivó en lugar de eliminarla.", "warning")
@@ -254,7 +368,6 @@ def register_routes(app):
         year = int(request.values.get("year", anio_actual_num))
 
         if request.method == "POST":
-            # Recorremos todos los campos "monto_<category_id>" enviados desde el formulario
             for key, value in request.form.items():
                 if key.startswith("monto_"):
                     cat_id = int(key.split("_")[1])
@@ -276,7 +389,6 @@ def register_routes(app):
             flash(f"Presupuesto de {nombre_mes(month)} {year} guardado.", "success")
             return redirect(url_for("presupuesto", month=month, year=year))
 
-        # Solo se presupuestan Gastos y Ahorros (los Ingresos son la meta, no un límite)
         categorias_presupuestables = (
             Category.query.filter(Category.type.in_([TIPO_GASTO, TIPO_AHORRO]), Category.active == True)
             .order_by(Category.type, Category.name).all()
@@ -301,13 +413,19 @@ def register_routes(app):
         mes_actual_num, anio_actual_num = mes_actual()
         month = int(request.args.get("month", mes_actual_num))
         year = int(request.args.get("year", anio_actual_num))
-        primer_dia, ultimo_dia = rango_mes(month, year)
 
-        # Totales generales del mes (ejecutado real)
+        # Todos los totales del Dashboard se calculan por PERIODO
+        # PRESUPUESTAL (budget_month/budget_year), no por fecha real, para
+        # que los movimientos marcados "mes anterior" cuenten en el mes al
+        # que presupuestalmente pertenecen.
         def total_ejecutado(tipo):
             resultado = (
                 db.session.query(func.sum(Transaction.amount))
-                .filter(Transaction.type == tipo, Transaction.date.between(primer_dia, ultimo_dia))
+                .filter(
+                    Transaction.type == tipo,
+                    Transaction.budget_month == month,
+                    Transaction.budget_year == year,
+                )
                 .scalar()
             )
             return resultado or 0.0
@@ -317,7 +435,6 @@ def register_routes(app):
         total_ahorros = total_ejecutado(TIPO_AHORRO)
         balance_neto = total_ingresos - total_gastos - total_ahorros
 
-        # Detalle Presupuesto Asignado vs Ejecutado por categoría (Gasto y Ahorro)
         categorias = (
             Category.query.filter(Category.type.in_([TIPO_GASTO, TIPO_AHORRO]))
             .order_by(Category.type, Category.name).all()
@@ -334,7 +451,8 @@ def register_routes(app):
                 db.session.query(func.sum(Transaction.amount))
                 .filter(
                     Transaction.category_id == cat.id,
-                    Transaction.date.between(primer_dia, ultimo_dia),
+                    Transaction.budget_month == month,
+                    Transaction.budget_year == year,
                 )
                 .scalar()
             ) or 0.0
@@ -344,7 +462,6 @@ def register_routes(app):
             else:
                 porcentaje = 100.0 if ejecutado > 0 else 0.0
 
-            # Semáforo de alertas: verde < 80%, amarillo 80-100%, rojo > 100%
             if porcentaje >= 100:
                 nivel_alerta = "danger"
             elif porcentaje >= 80:
@@ -352,7 +469,6 @@ def register_routes(app):
             else:
                 nivel_alerta = "success"
 
-            # Solo se listan categorías con presupuesto o movimientos (evita ruido visual)
             if monto_presupuestado > 0 or ejecutado > 0:
                 detalle.append({
                     "categoria": cat,

@@ -1,8 +1,3 @@
-/* =========================================================
-   style.css — Diseño mobile-first para Presupuesto Familiar
-   Paleta: verde esmeralda (finanzas/ahorro) + acentos neutros
-   ========================================================= */
-
 :root {
     --brand-primary: #0f5132;
     --brand-primary-light: #146c43;
@@ -15,7 +10,7 @@
 
 body {
     background-color: var(--brand-bg);
-    padding-bottom: 76px; /* espacio para la barra inferior en celular */
+    padding-bottom: 76px;
 }
 
 .app-navbar {
@@ -28,7 +23,6 @@ body {
     padding-top: 1rem;
 }
 
-/* ---------- Tarjetas resumen del dashboard ---------- */
 .summary-card {
     border: none;
     border-radius: 14px;
@@ -43,13 +37,11 @@ body {
 .summary-card .value { font-size: 1.6rem; font-weight: 700; }
 .summary-card .label { font-size: 0.85rem; opacity: 0.85; text-transform: uppercase; letter-spacing: .03em; }
 
-/* ---------- Barra de progreso presupuesto vs ejecutado ---------- */
 .progress { height: 10px; border-radius: 6px; background-color: #e9ecef; }
 .progress-bar.bg-success { background-color: var(--brand-success) !important; }
 .progress-bar.bg-warning { background-color: var(--brand-warning) !important; }
 .progress-bar.bg-danger  { background-color: var(--brand-danger)  !important; }
 
-/* ---------- Formulario de registro rápido (celular) ---------- */
 .quick-form .btn-check + label.btn {
     border-radius: 10px;
     font-weight: 600;
@@ -65,18 +57,15 @@ body {
     text-align: right;
 }
 
-/* ---------- Lista de movimientos recientes ---------- */
 .movimiento-item { border-radius: 10px; }
 .movimiento-monto.ingreso { color: var(--brand-success); font-weight: 700; }
 .movimiento-monto.gasto   { color: var(--brand-danger); font-weight: 700; }
 .movimiento-monto.ahorro  { color: #084298; font-weight: 700; }
 
-/* ---------- Tabla de conciliación / presupuesto ---------- */
 .table-conciliacion td, .table-conciliacion th { vertical-align: middle; }
 .diferencia-ok { color: var(--brand-success); font-weight: 600; }
 .diferencia-mal { color: var(--brand-danger); font-weight: 600; }
 
-/* ---------- Barra inferior de navegación (solo celular) ---------- */
 .bottom-nav {
     position: fixed;
     bottom: 0; left: 0; right: 0;
@@ -99,7 +88,6 @@ body {
 .bottom-nav-item.active { color: var(--brand-primary); }
 .bottom-nav-fab i { color: var(--brand-primary); font-size: 2rem; }
 
-/* ---------- Ajustes para pantallas grandes (PC) ---------- */
 @media (min-width: 992px) {
     .app-content { padding-top: 1.5rem; }
     body { padding-bottom: 0; }

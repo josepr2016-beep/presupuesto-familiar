@@ -5,6 +5,7 @@ Funciones de apoyo reutilizables en toda la aplicación:
  - Formato de moneda en Pesos Colombianos (COP)
  - Nombres de meses en español
  - Cálculo de rangos de fechas de un mes
+ - Cálculo del mes anterior (para el periodo presupuestal de un movimiento)
 """
 
 import calendar
@@ -26,8 +27,6 @@ def format_cop(value):
         value = float(value)
     except (TypeError, ValueError):
         value = 0.0
-    # Formateamos con separador de miles "," (estándar de Python) y luego
-    # lo reemplazamos por "." para seguir la convención colombiana.
     entero = round(value)
     signo = "-" if entero < 0 else ""
     formateado = "{:,.0f}".format(abs(entero)).replace(",", ".")
@@ -49,3 +48,22 @@ def rango_mes(month: int, year: int):
 def mes_actual():
     hoy = date.today()
     return hoy.month, hoy.year
+
+
+def mes_anterior(month: int, year: int):
+    """Devuelve (mes, año) del mes inmediatamente anterior al indicado."""
+    if month == 1:
+        return 12, year - 1
+    return month - 1, year
+
+
+def periodo_por_defecto(fecha: date, usar_mes_anterior: bool = False):
+    """
+    Calcula el (mes, año) de PRESUPUESTO para un movimiento, a partir de
+    su fecha real. Si usar_mes_anterior=True, se desplaza un mes hacia
+    atrás (ej: un gasto del 2 de marzo que corresponde al presupuesto
+    de febrero).
+    """
+    if usar_mes_anterior:
+        return mes_anterior(fecha.month, fecha.year)
+    return fecha.month, fecha.year

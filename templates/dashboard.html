@@ -21,22 +21,28 @@
 <!-- Tarjetas resumen -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
-        <div class="card summary-card ingresos p-3">
-            <div class="label">Ingresos</div>
-            <div class="value">{{ total_ingresos|cop }}</div>
-        </div>
+        <a href="{{ url_for('movimientos', month=month, year=year, type='ingreso') }}" class="text-decoration-none">
+            <div class="card summary-card ingresos p-3">
+                <div class="label">Ingresos</div>
+                <div class="value">{{ total_ingresos|cop }}</div>
+            </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card summary-card gastos p-3">
-            <div class="label">Gastos</div>
-            <div class="value">{{ total_gastos|cop }}</div>
-        </div>
+        <a href="{{ url_for('movimientos', month=month, year=year, type='gasto') }}" class="text-decoration-none">
+            <div class="card summary-card gastos p-3">
+                <div class="label">Gastos</div>
+                <div class="value">{{ total_gastos|cop }}</div>
+            </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card summary-card ahorros p-3">
-            <div class="label">Ahorros</div>
-            <div class="value">{{ total_ahorros|cop }}</div>
-        </div>
+        <a href="{{ url_for('movimientos', month=month, year=year, type='ahorro') }}" class="text-decoration-none">
+            <div class="card summary-card ahorros p-3">
+                <div class="label">Ahorros</div>
+                <div class="value">{{ total_ahorros|cop }}</div>
+            </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
         <div class="card summary-card balance p-3">
@@ -58,6 +64,7 @@
                     <th class="text-end">Ejecutado</th>
                     <th class="text-end">Diferencia</th>
                     <th style="width: 220px;">% Ejecución</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -83,9 +90,15 @@
                             <span class="badge bg-{{ item.nivel_alerta }}">{{ item.porcentaje }}%</span>
                         </div>
                     </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('movimientos', month=month, year=year, category_id=item.categoria.id) }}"
+                           class="btn btn-sm btn-outline-secondary" title="Ver movimientos de esta categoría">
+                            <i class="bi bi-list-ul"></i>
+                        </a>
+                    </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="5" class="text-muted text-center py-3">
+                <tr><td colspan="6" class="text-muted text-center py-3">
                     No hay presupuesto ni movimientos para este periodo. Ve a
                     <a href="{{ url_for('presupuesto', month=month, year=year) }}">Presupuesto</a> para empezar.
                 </td></tr>
@@ -100,5 +113,6 @@
     Semáforo: <span class="badge bg-success">&lt; 80%</span> dentro del presupuesto ·
     <span class="badge bg-warning">80% - 100%</span> cerca del límite ·
     <span class="badge bg-danger">&gt; 100%</span> presupuesto superado.
+    Haz clic en <i class="bi bi-list-ul"></i> junto a una categoría para ver el detalle de sus movimientos.
 </div>
 {% endblock %}

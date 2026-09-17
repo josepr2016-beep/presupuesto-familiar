@@ -1,7 +1,7 @@
 /**
  * main.js
  * -------
- * Lógica del formulario de registro rápido:
+ * Lógica del formulario de registro/edición de movimientos:
  * al cambiar el tipo de movimiento (Ingreso/Gasto/Ahorro),
  * recarga vía API solo las categorías correspondientes a ese tipo.
  */

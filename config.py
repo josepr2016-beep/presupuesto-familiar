@@ -1,11 +1,3 @@
-"""
-config.py
----------
-Configuración central de la aplicación.
-Todos los valores sensibles/ajustables se manejan aquí para no
-tener "números mágicos" ni rutas repartidas por el código.
-"""
-
 import os
 
 # Carpeta base del proyecto (donde vive este archivo)

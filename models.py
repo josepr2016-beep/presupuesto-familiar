@@ -62,7 +62,10 @@ class Account(db.Model):
 
     def theoretical_balance(self, up_to_date=None):
         """
-        Calcula el saldo TEÓRICO de la cuenta:
+        Calcula el saldo TEÓRICO de la cuenta, usando la FECHA REAL del
+        movimiento (no el mes presupuestal): lo que importa para conciliar
+        con el banco es cuándo salió el dinero de verdad.
+
         saldo_inicial + ingresos - gastos - ahorros (todos los movimientos
         registrados en esta cuenta hasta la fecha indicada).
         """
@@ -84,7 +87,18 @@ class Account(db.Model):
 
 
 class Transaction(db.Model):
-    """Movimiento diario: ingreso, gasto o ahorro."""
+    """
+    Movimiento diario: ingreso, gasto o ahorro.
+
+    Tiene DOS nociones de fecha, a propósito:
+      - `date`: la fecha REAL en que ocurrió el movimiento (para conciliar
+        el saldo real del banco/efectivo).
+      - `budget_month` / `budget_year`: el MES DE PRESUPUESTO al que se
+        debe contabilizar (para el Dashboard y el Presupuesto). Por defecto
+        coincide con `date`, pero se puede desplazar al mes anterior, por
+        ejemplo un gasto pagado el 2 de un mes que en realidad corresponde
+        al cierre del mes anterior.
+    """
     __tablename__ = "transactions"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -95,6 +109,13 @@ class Transaction(db.Model):
     date = db.Column(db.Date, nullable=False, default=date.today)
     description = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Periodo presupuestal (mes/año al que se contabiliza este movimiento
+    # en el Dashboard y el Presupuesto). Nullable a nivel de base de datos
+    # por compatibilidad con instalaciones antiguas; la app los rellena
+    # siempre al crear o editar un movimiento (ver utils.periodo_por_defecto).
+    budget_month = db.Column(db.Integer, nullable=True)
+    budget_year = db.Column(db.Integer, nullable=True)
 
     def __repr__(self):
         return f"<Transaction {self.type} {self.amount} {self.date}>"
